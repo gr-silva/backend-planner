@@ -2,9 +2,14 @@ import nodemailer from "nodemailer";
 import { FastifyInstance } from "fastify";
 import { ZodTypeProvider } from "fastify-type-provider-zod";
 import dayjs from "dayjs";
+import localizedFormat from "dayjs/plugin/localizedFormat";
+import "dayjs/locale/pt-br";
 import { z } from "zod";
 import { prisma } from "../lib/prisma";
 import { getMailClient } from "../lib/mail";
+
+dayjs.locale("pt-br");
+dayjs.extend(localizedFormat);
 
 export async function createTrip(app: FastifyInstance) {
   app.withTypeProvider<ZodTypeProvider>().post(
@@ -62,6 +67,11 @@ export async function createTrip(app: FastifyInstance) {
         },
       });
 
+      const formattedStartDate = dayjs(starts_at).format("LL");
+      const formattedEndDate = dayjs(ends_at).format("LL");
+
+      const confirmationLink = `http://localhost:3333/trips/${trip.id}/confirm`;
+
       const mail = await getMailClient();
       const message = await mail.sendMail({
         from: {
@@ -72,15 +82,15 @@ export async function createTrip(app: FastifyInstance) {
           name: owner_name,
           address: owner_email,
         },
-        subject: `Confirme sua viagem para ${destination}`,
+        subject: `Confirme sua viagem para ${destination} em ${formattedStartDate}`,
         html: `
           <div style="font-family: sans-serif; font-size: 16px; line-height: 1.6;">
-            <p>Você solicitou a criação de uma viagem para <strong>${destination}</strong> nas datas de <strong>16 a 27 de Agosto de 2024</strong>.</p>
+            <p>Você solicitou a criação de uma viagem para <strong>${destination}</strong> nas datas de <strong>${formattedStartDate}</strong> até <strong>${formattedEndDate}</strong>.</p>
             <p></p>
             <p>Para confirmar sua viagem, clique no link abaixo:</p>
             <p></p>
             <p>
-              <a href="">Confirmar viagem</a>
+              <a href="${confirmationLink}">Confirmar viagem</a>
             </p>
             <p></p>
             <p>Caso você não saiba do que se trata esse e-mail, apenas ignore esse e-mail.</p>
